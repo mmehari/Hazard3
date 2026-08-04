@@ -16,3 +16,6 @@
 [submodule "test/sim/embench/embench-iot"]
 	path = test/sim/embench/embench-iot
 	url = https://github.com/Wren6991/embench-iot.git
+[submodule "example_soc/soc/peri/usb_cdc"]
+	path = example_soc/soc/peri/usb_cdc
+	url = git@github.com:mmehari/usb_cdc.git
