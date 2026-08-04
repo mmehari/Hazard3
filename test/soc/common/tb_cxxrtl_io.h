@@ -116,6 +116,20 @@ void usleep(uint32_t usec) {
 	while ((read_mtime() - start) < usec);
 }
 
+static inline void u32_to_buf(uint32_t value, char *buf) {
+	char scratch[UART_U32_BUF_SIZE];
+	uint32_t i = 0u;
+
+	do {
+		scratch[i++] = (char)('0' + value % 10u);
+		value /= 10u;
+	} while (value);
+
+	for (uint32_t j = 0u; j < i; ++j)
+		buf[j] = scratch[i - j - 1u];
+	buf[i] = '\0';
+}
+
 static inline void usb_cdc_putc_blocking(char c) {
 	while (!(mm_usb_cdc->fstat.bits.in_ready));
 	mm_usb_cdc->tx_data = (uint32_t)c;
@@ -125,6 +139,18 @@ void usb_cdc_puts(const char *s) {
 	while (*s) {
 		usb_cdc_putc_blocking(*s++);
 	}
+}
+
+void usb_cdc_puts_data(const char *s, uint32_t len) {
+	for (uint32_t i = 0; i < len; ++i) {
+		usb_cdc_putc_blocking(s[i]);
+	}
+}
+
+void usb_cdc_puts_32(uint32_t value) {
+	char buf[UART_U32_BUF_SIZE];
+	u32_to_buf(value, buf);
+	usb_cdc_puts(buf);
 }
 
 static void uart_init(void) {
@@ -152,23 +178,15 @@ void uart_puts(const char *s) {
 	}
 }
 
-static inline void uart_u32_to_buf(uint32_t value, char *buf) {
-	char scratch[UART_U32_BUF_SIZE];
-	uint32_t i = 0u;
-
-	do {
-		scratch[i++] = (char)('0' + value % 10u);
-		value /= 10u;
-	} while (value);
-
-	for (uint32_t j = 0u; j < i; ++j)
-		buf[j] = scratch[i - j - 1u];
-	buf[i] = '\0';
+void uart_puts_data(const char *s, uint32_t len) {
+	for (uint32_t i = 0; i < len; ++i) {
+		uart_putc_blocking(s[i]);
+	}
 }
 
 void uart_puts_32(uint32_t value) {
 	char buf[UART_U32_BUF_SIZE];
-	uart_u32_to_buf(value, buf);
+	u32_to_buf(value, buf);
 	uart_puts(buf);
 }
 
