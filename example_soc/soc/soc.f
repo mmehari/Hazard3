@@ -11,6 +11,18 @@ list $HDL/debug/dm/hazard3_dm.f
 # RISC-V timer
 
 list peri/hazard3_riscv_timer.f
+ 
+# USB communications device class
+
+file peri/usb_cdc/usb_cdc/phy_tx.v
+file peri/usb_cdc/usb_cdc/phy_rx.v
+file peri/usb_cdc/usb_cdc/sie.v
+file peri/usb_cdc/usb_cdc/ctrl_endp.v
+file peri/usb_cdc/usb_cdc/bulk_endp.v
+file peri/usb_cdc/usb_cdc/in_fifo.v
+file peri/usb_cdc/usb_cdc/out_fifo.v
+file peri/usb_cdc/usb_cdc/usb_cdc.v
+file peri/usb_cdc_apb.v
 
 # Generic SoC components from libfpga
 

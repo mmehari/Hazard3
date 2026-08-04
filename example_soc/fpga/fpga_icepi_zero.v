@@ -9,7 +9,12 @@ module fpga_icepi_zero (
 	input  wire       clk_osc,
 
 	output wire       uart_tx,
-	input  wire       uart_rx
+	input  wire       uart_rx,
+
+	// Expose USB differential pair directly
+	inout  wire       usb_dp,
+	inout  wire       usb_dn,
+	output wire       usb_dp_pu
 );
 
 wire clk_sys;
@@ -66,7 +71,12 @@ example_soc #(
 	.tdo     (/* unused */),
 
 	.uart_tx (uart_tx),
-	.uart_rx (uart_rx)
+	.uart_rx (uart_rx),
+
+	// USB I/O passed through
+	.usb_dp  (usb_dp),
+	.usb_dn  (usb_dn),
+	.usb_dp_pu (usb_dp_pu)
 );
 
 endmodule
