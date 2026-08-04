@@ -23,6 +23,10 @@ file peri/usb_cdc/usb_cdc/in_fifo.v
 file peri/usb_cdc/usb_cdc/out_fifo.v
 file peri/usb_cdc/usb_cdc/usb_cdc.v
 file peri/usb_cdc_apb.v
+ 
+# AHB3-Lite hosted scope
+
+list peri/ahbscope.f
 
 # Generic SoC components from libfpga
 

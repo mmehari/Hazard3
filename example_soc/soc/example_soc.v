@@ -386,6 +386,7 @@ hazard3_cpu_1port #(
 // - System timer at.. 0x4000_0000
 // - UART at.......... 0x4000_4000
 // - USB_CDC at....... 0x4000_8000
+// - AHB scope at..... 0x6000_0000
 
 // AHBL layer
 
@@ -415,10 +416,25 @@ wire               bridge_hmastlock;
 wire [W_DATA-1:0]  bridge_hwdata;
 wire [W_DATA-1:0]  bridge_hrdata;
 
+wire               scope_hready_resp;
+wire               scope_hready;
+wire               scope_hresp;
+wire [W_ADDR-1:0]  scope_haddr;
+wire               scope_hwrite;
+wire [1:0]         scope_htrans;
+wire [2:0]         scope_hsize;
+wire [2:0]         scope_hburst;
+wire [3:0]         scope_hprot;
+wire               scope_hmastlock;
+wire [W_DATA-1:0]  scope_hwdata;
+wire [W_DATA-1:0]  scope_hrdata;
+wire               scope_irq;
+wire               unused_scope;
+
 ahbl_splitter #(
-	.N_PORTS     (2),
-	.ADDR_MAP    (64'h40000000_00000000),
-	.ADDR_MASK   (64'he0000000_e0000000)
+	.N_PORTS     (3),
+	.ADDR_MAP    (96'h60000000_40000000_00000000),
+	.ADDR_MASK   (96'he0000000_e0000000_e0000000)
 ) splitter_u (
 	.clk             (clk),
 	.rst_n           (rst_n),
@@ -436,18 +452,18 @@ ahbl_splitter #(
 	.src_hwdata      (proc_hwdata   ),
 	.src_hrdata      (proc_hrdata   ),
 
-	.dst_hready_resp ({bridge_hready_resp , sram0_hready_resp}),
-	.dst_hready      ({bridge_hready      , sram0_hready     }),
-	.dst_hresp       ({bridge_hresp       , sram0_hresp      }),
-	.dst_haddr       ({bridge_haddr       , sram0_haddr      }),
-	.dst_hwrite      ({bridge_hwrite      , sram0_hwrite     }),
-	.dst_htrans      ({bridge_htrans      , sram0_htrans     }),
-	.dst_hsize       ({bridge_hsize       , sram0_hsize      }),
-	.dst_hburst      ({bridge_hburst      , sram0_hburst     }),
-	.dst_hprot       ({bridge_hprot       , sram0_hprot      }),
-	.dst_hmastlock   ({bridge_hmastlock   , sram0_hmastlock  }),
-	.dst_hwdata      ({bridge_hwdata      , sram0_hwdata     }),
-	.dst_hrdata      ({bridge_hrdata      , sram0_hrdata     })
+	.dst_hready_resp ({scope_hready_resp  , bridge_hready_resp , sram0_hready_resp}),
+	.dst_hready      ({scope_hready       , bridge_hready      , sram0_hready     }),
+	.dst_hresp       ({scope_hresp        , bridge_hresp       , sram0_hresp      }),
+	.dst_haddr       ({scope_haddr        , bridge_haddr       , sram0_haddr      }),
+	.dst_hwrite      ({scope_hwrite       , bridge_hwrite      , sram0_hwrite     }),
+	.dst_htrans      ({scope_htrans       , bridge_htrans      , sram0_htrans     }),
+	.dst_hsize       ({scope_hsize        , bridge_hsize       , sram0_hsize      }),
+	.dst_hburst      ({scope_hburst       , bridge_hburst      , sram0_hburst     }),
+	.dst_hprot       ({scope_hprot        , bridge_hprot       , sram0_hprot      }),
+	.dst_hmastlock   ({scope_hmastlock    , bridge_hmastlock   , sram0_hmastlock  }),
+	.dst_hwdata      ({scope_hwdata       , bridge_hwdata      , sram0_hwdata     }),
+	.dst_hrdata      ({scope_hrdata       , bridge_hrdata      , sram0_hrdata     })
 );
 
 // APB layer
@@ -603,6 +619,34 @@ usb_cdc_apb usb_cdc_u (
 // Tri-state top-level USB pins: drive when tx_en asserted, otherwise hi-Z
 assign usb_dp = usb_tx_en ? usb_dp_tx : 1'bz;
 assign usb_dn = usb_tx_en ? usb_dn_tx : 1'bz;
+
+ahbscope #(
+	.LGMEM       (5'd6),
+	.BUSW        (32),
+	.SYNCHRONOUS (1)
+) ahb_scope_u (
+	.i_data_clk  (clk),
+	.i_ce        (1'b0),
+	.i_trigger   (1'b0),
+	.i_data      (32'd0),
+	.HCLK        (clk),
+	.HRESETn     (rst_n),
+	.HSEL        (1'b1),
+	.HADDR       (scope_haddr),
+	.HTRANS      (scope_htrans),
+	.HWRITE      (scope_hwrite),
+	.HSIZE       (scope_hsize),
+	.HBURST      (scope_hburst),
+	.HPROT       (scope_hprot),
+	.HWDATA      (scope_hwdata),
+	.HREADY      (scope_hready),
+	.HRDATA      (scope_hrdata),
+	.HREADYOUT   (scope_hready_resp),
+	.HRESP       (scope_hresp),
+	.o_interrupt (scope_irq)
+);
+
+assign unused_scope = scope_hmastlock | scope_irq;
 
 uart_mini uart_u (
 	.clk          (clk),
