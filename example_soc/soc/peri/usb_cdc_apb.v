@@ -28,8 +28,16 @@ module usb_cdc_apb (
 
     // optional status outputs
     output wire [10:0] frame_o,
-    output wire        configured_o
+    output wire        configured_o,
+
+    output wire        scope_ce,
+    output wire        scope_trigger,
+    output wire [31:0] scope_data
 );
+
+assign scope_ce = 1'b1;
+assign scope_trigger = (in_valid_i && in_ready_o) || (out_valid_o && out_ready_i);
+assign scope_data = {in_valid_i, in_ready_o, in_data_i, out_valid_r,out_valid_o, out_ready_i, out_data_o, apbs_psel, apbs_penable, apbs_pwrite, addr_word, dp_pu_o, tx_en_o, dp_tx_o, dn_tx_o, dp_rx_i, dn_rx_i};
 
 // Simple APB read/write behaviour
 wire [1:0] addr_word = apbs_paddr[3:2];

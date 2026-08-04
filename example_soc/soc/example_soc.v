@@ -592,6 +592,10 @@ wire usb_dn_tx;
 wire [10:0] usb_frame;
 wire usb_configured;
 
+wire scope_ce;
+wire scope_trigger;
+wire [31:0] scope_data;
+
 usb_cdc_apb usb_cdc_u (
 	.clk           (clk),
 	.rst_n         (rst_n),
@@ -613,7 +617,11 @@ usb_cdc_apb usb_cdc_u (
 	.dn_tx_o       (usb_dn_tx),
 
 	.frame_o       (usb_frame),
-	.configured_o  (usb_configured)
+	.configured_o  (usb_configured),
+
+	.scope_ce      (scope_ce),
+	.scope_trigger (scope_trigger),
+	.scope_data    (scope_data)
 );
 
 // Tri-state top-level USB pins: drive when tx_en asserted, otherwise hi-Z
@@ -626,9 +634,9 @@ ahbscope #(
 	.SYNCHRONOUS (1)
 ) ahb_scope_u (
 	.i_data_clk  (clk),
-	.i_ce        (1'b0),
-	.i_trigger   (1'b0),
-	.i_data      (32'd0),
+	.i_ce        (scope_ce),
+	.i_trigger   (scope_trigger),
+	.i_data      (scope_data),
 	.HCLK        (clk),
 	.HRESETn     (rst_n),
 	.HSEL        (1'b1),
