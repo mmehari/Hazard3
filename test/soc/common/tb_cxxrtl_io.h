@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "hazard3_irq.h"
+
 // ----------------------------------------------------------------------------
 // SOC IO hardware layout
 
@@ -94,6 +96,120 @@ typedef struct {
 
 // ----------------------------------------------------------------------------
 // SOC IO convenience functions
+
+#define UART_INTR_BUF_SIZE 128u
+#define UART_INTR_BUF_MASK (UART_INTR_BUF_SIZE - 1u)
+
+static volatile uint32_t uart_intr_tx_head;
+static volatile uint32_t uart_intr_tx_tail;
+static volatile uint32_t uart_intr_rx_head;
+static volatile uint32_t uart_intr_rx_tail;
+static char uart_intr_tx_buf[UART_INTR_BUF_SIZE];
+static char uart_intr_rx_buf[UART_INTR_BUF_SIZE];
+
+static inline uint32_t uart_intr_irq_disable(void) {
+	return read_clear_csr(mstatus, 0x8u);
+}
+
+static inline void uart_intr_irq_restore(uint32_t mstatus_prev) {
+	if (mstatus_prev & 0x8u)
+		set_csr(mstatus, 0x8u);
+}
+
+static void uart_intr_irq_handler(void) {
+	while (!mm_uart->fstat.bits.rxempty) {
+		uint32_t rx_head = uart_intr_rx_head;
+		uart_intr_rx_buf[rx_head & UART_INTR_BUF_MASK] = (char)mm_uart->rx;
+		asm volatile ("" : : : "memory");
+		uart_intr_rx_head = rx_head + 1u;
+		if (uart_intr_rx_head - uart_intr_rx_tail > UART_INTR_BUF_SIZE)
+			uart_intr_rx_tail = uart_intr_rx_head - UART_INTR_BUF_SIZE;
+	}
+
+	while (!mm_uart->fstat.bits.txfull && uart_intr_tx_head != uart_intr_tx_tail) {
+		uint32_t tx_tail = uart_intr_tx_tail;
+		mm_uart->tx = (uint32_t)(uint8_t)uart_intr_tx_buf[tx_tail & UART_INTR_BUF_MASK];
+		asm volatile ("" : : : "memory");
+		uart_intr_tx_tail = tx_tail + 1u;
+	}
+
+	if (uart_intr_tx_head == uart_intr_tx_tail)
+		mm_uart->csr.bits.txie = 0u;
+}
+
+static inline void uart_intr_init(void) {
+	uart_csr_hw_t csr;
+	uart_div_hw_t div;
+	uint32_t mstatus_prev = uart_intr_irq_disable();
+
+	uart_intr_tx_head = 0u;
+	uart_intr_tx_tail = 0u;
+	uart_intr_rx_head = 0u;
+	uart_intr_rx_tail = 0u;
+
+	csr.bits.en = 1u;
+	csr.bits.txie = 0u;
+	csr.bits.rxie = 1u;
+	mm_uart->csr = csr;
+
+	// 115200 baudrate with 48 MHz clock
+	// 48 MHz / 115200 / 8 = 52.083333333 = 52 + 0.083333333 ≈ 52 + 1/16
+	div.bits.intgr = 52u;
+	div.bits.frac = 1u;
+	mm_uart->div = div;
+
+	external_irq_enable(true);
+
+	uart_intr_irq_restore(mstatus_prev);
+	global_irq_enable(true);
+}
+
+void __attribute__((interrupt)) isr_external_irq(void) {
+	uart_intr_irq_handler();
+}
+
+void uart_intr_puts(const char *s) {
+	while (*s) {
+		while (uart_intr_tx_head - uart_intr_tx_tail >= UART_INTR_BUF_SIZE)
+			asm volatile ("wfi");
+
+		uint32_t mstatus_prev = uart_intr_irq_disable();
+		uint32_t tx_head = uart_intr_tx_head;
+
+		if (tx_head - uart_intr_tx_tail < UART_INTR_BUF_SIZE) {
+			uart_intr_tx_buf[tx_head & UART_INTR_BUF_MASK] = *s++;
+			asm volatile ("" : : : "memory");
+			uart_intr_tx_head = tx_head + 1u;
+			mm_uart->csr.bits.txie = 1u;
+		}
+
+		uart_intr_irq_restore(mstatus_prev);
+	}
+}
+
+uint32_t uart_intr_gets(char *s, uint32_t len, bool blocking) {
+	uint32_t copied = 0u;
+
+	while (copied < len) {
+		uint32_t mstatus_prev = uart_intr_irq_disable();
+		uint32_t rx_tail = uart_intr_rx_tail;
+
+		if (uart_intr_rx_head != rx_tail) {
+			s[copied++] = uart_intr_rx_buf[rx_tail & UART_INTR_BUF_MASK];
+			asm volatile ("" : : : "memory");
+			uart_intr_rx_tail = rx_tail + 1u;
+			uart_intr_irq_restore(mstatus_prev);
+			continue;
+		}
+
+		uart_intr_irq_restore(mstatus_prev);
+		if (!blocking)
+			break;
+		asm volatile ("wfi");
+	}
+
+	return copied;
+}
 
 #define UART_U32_BUF_SIZE 11u
  
