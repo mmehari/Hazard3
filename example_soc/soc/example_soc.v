@@ -629,7 +629,7 @@ assign usb_dp = usb_tx_en ? usb_dp_tx : 1'bz;
 assign usb_dn = usb_tx_en ? usb_dn_tx : 1'bz;
 
 ahbscope #(
-	.LGMEM       (5'd6),
+	.LGMEM       (5'd7),
 	.BUSW        (32),
 	.SYNCHRONOUS (1)
 ) ahb_scope_u (
