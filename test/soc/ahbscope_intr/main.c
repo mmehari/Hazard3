@@ -1,7 +1,7 @@
 #include "tb_cxxrtl_io.h"
 
 void main() {
-	uint32_t holdoff = 10u;
+	uint32_t holdoff = 127u;
 	ahbscope_intr_init(holdoff);
 
 	while(true) {
