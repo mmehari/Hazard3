@@ -415,8 +415,7 @@ module ahbscope #(
 	else
 		br_level_interrupt <= (bw_stopped)&&(!bw_disable_trigger);
 
-	assign	o_interrupt = (bw_stopped)&&(!bw_disable_trigger)
-					&&(!br_level_interrupt);
+	assign	o_interrupt = br_level_interrupt;
 	// }}}
 
 	// Make verilator happy

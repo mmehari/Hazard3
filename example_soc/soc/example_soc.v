@@ -265,6 +265,7 @@ wire              unblock_out;
 
 wire              uart_irq;
 wire              timer_irq;
+wire              scope_irq;
 
 hazard3_cpu_1port #(
 	// These must have the values given here for you to end up with a useful SoC:
@@ -372,7 +373,7 @@ hazard3_cpu_1port #(
 	.mhartid_val                (32'd0),
 	.eco_version                (4'd0),
 
-	.irq                        (uart_irq),
+	.irq                        (uart_irq || scope_irq),
 
 	.soft_irq                   (1'b0),
 	.timer_irq                  (timer_irq)
@@ -428,7 +429,6 @@ wire [3:0]         scope_hprot;
 wire               scope_hmastlock;
 wire [W_DATA-1:0]  scope_hwdata;
 wire [W_DATA-1:0]  scope_hrdata;
-wire               scope_irq;
 wire               unused_scope;
 
 ahbl_splitter #(
@@ -654,7 +654,7 @@ ahbscope #(
 	.o_interrupt (scope_irq)
 );
 
-assign unused_scope = scope_hmastlock | scope_irq;
+assign unused_scope = scope_hmastlock;
 
 uart_mini uart_u (
 	.clk          (clk),
