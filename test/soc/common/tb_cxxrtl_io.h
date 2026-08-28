@@ -14,6 +14,7 @@
 #define TIMER_BASE 0x40000000
 #define UART_BASE 0x40004000
 #define USB_CDC_BASE 0x40008000
+#define GPIO_BASE 0x4000C000
 #define AHBSCOPE_BASE 0x60000000
 
 typedef struct {
@@ -94,6 +95,13 @@ typedef struct {
 } usb_cdc_hw_t;
 
 #define mm_usb_cdc ((usb_cdc_hw_t *const)(USB_CDC_BASE))
+ 
+typedef struct {
+	volatile uint32_t data;  /* 0x00 - read/write */
+	volatile uint32_t dir;   /* 0x04 - 1=output */
+} gpio_hw_t;
+
+#define mm_gpio ((gpio_hw_t *const)(GPIO_BASE))
 
 typedef union {
 	uint32_t value;
@@ -359,6 +367,18 @@ void usb_cdc_puts_32(uint32_t value) {
 	char buf[UART_U32_BUF_SIZE];
 	u32_to_buf(value, buf);
 	usb_cdc_puts(buf);
+}
+ 
+static inline void gpio_set_dir(uint32_t mask) {
+	mm_gpio->dir = mask;
+}
+
+static inline void gpio_write(uint32_t value) {
+	mm_gpio->data = value;
+}
+
+static inline uint32_t gpio_read(void) {
+	return mm_gpio->data;
 }
 
 static void ahbscope_intr_irq_handler(void) {

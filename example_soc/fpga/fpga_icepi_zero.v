@@ -41,7 +41,7 @@ fpga_reset #(
 example_soc #(
 	.DTM_TYPE           ("ECP5"),
 	.SRAM_DEPTH         (1<<14),
-	.PRELOAD_FILE       ("../../test/soc/ahbscope_intr/tmp/ahbscope_intr.hex"),
+	.PRELOAD_FILE       ("../../test/soc/square_wave/tmp/square_wave.hex"),
 	.CLK_MHZ            (48),
 
 	.EXTENSION_M         (1),
