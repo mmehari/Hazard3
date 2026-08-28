@@ -11,6 +11,9 @@ module fpga_icepi_zero (
 	output wire       uart_tx,
 	input  wire       uart_rx,
 
+	// Top-level GPIO pins (28)
+	inout  wire [27:0] gpio,
+
 	// Expose USB differential pair directly
 	inout  wire       usb_dp,
 	inout  wire       usb_dn,
@@ -73,6 +76,9 @@ example_soc #(
 
 	.uart_tx (uart_tx),
 	.uart_rx (uart_rx),
+
+	// Top-level GPIO pins
+	.gpio    (gpio),
 
 	// USB I/O passed through
 	.usb_dp  (usb_dp),

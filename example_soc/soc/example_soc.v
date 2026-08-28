@@ -31,6 +31,9 @@ module example_soc #(
 	output wire              uart_tx,
 	input  wire              uart_rx,
 
+	// Top-level GPIO pins (28) — direction/data controlled by software
+	inout  wire [27:0]       gpio,
+
 	// USB differential pair (exposed directly)
 	inout  wire              usb_dp,
 	inout  wire              usb_dn,
@@ -505,6 +508,16 @@ wire [31:0] timer_prdata;
 wire        timer_pready;
 wire        timer_pslverr;
 
+// GPIO APB signals
+wire        gpio_psel;
+wire        gpio_penable;
+wire        gpio_pwrite;
+wire [15:0] gpio_paddr;
+wire [31:0] gpio_pwdata;
+wire [31:0] gpio_prdata;
+wire        gpio_pready;
+wire        gpio_pslverr;
+
 ahbl_to_apb apb_bridge_u (
 	.clk               (clk),
 	.rst_n             (rst_n),
@@ -533,9 +546,9 @@ ahbl_to_apb apb_bridge_u (
 );
 
 apb_splitter #(
-	.N_SLAVES   (3),
-	.ADDR_MAP   (48'h8000_4000_0000),
-	.ADDR_MASK  (48'hc000_c000_c000)
+	.N_SLAVES   (4),
+	.ADDR_MAP   (64'hC000_8000_4000_0000),
+	.ADDR_MASK  (64'hC000_C000_C000_C000)
 ) inst_apb_splitter (
 	.apbs_paddr   (bridge_paddr),
 	.apbs_psel    (bridge_psel),
@@ -546,14 +559,14 @@ apb_splitter #(
 	.apbs_prdata  (bridge_prdata),
 	.apbs_pslverr (bridge_pslverr),
 
-	.apbm_paddr   ({usb_cdc_paddr   , uart_paddr   , timer_paddr  }),
-	.apbm_psel    ({usb_cdc_psel    , uart_psel    , timer_psel   }),
-	.apbm_penable ({usb_cdc_penable , uart_penable , timer_penable}),
-	.apbm_pwrite  ({usb_cdc_pwrite  , uart_pwrite  , timer_pwrite }),
-	.apbm_pwdata  ({usb_cdc_pwdata  , uart_pwdata  , timer_pwdata }),
-	.apbm_pready  ({usb_cdc_pready  , uart_pready  , timer_pready }),
-	.apbm_prdata  ({usb_cdc_prdata  , uart_prdata  , timer_prdata }),
-	.apbm_pslverr ({usb_cdc_pslverr , uart_pslverr , timer_pslverr})
+	.apbm_paddr   ({gpio_paddr,   usb_cdc_paddr   , uart_paddr   , timer_paddr  }),
+	.apbm_psel    ({gpio_psel,    usb_cdc_psel    , uart_psel    , timer_psel   }),
+	.apbm_penable ({gpio_penable, usb_cdc_penable , uart_penable , timer_penable}),
+	.apbm_pwrite  ({gpio_pwrite,  usb_cdc_pwrite  , uart_pwrite  , timer_pwrite }),
+	.apbm_pwdata  ({gpio_pwdata,  usb_cdc_pwdata  , uart_pwdata  , timer_pwdata }),
+	.apbm_pready  ({gpio_pready,  usb_cdc_pready  , uart_pready  , timer_pready }),
+	.apbm_prdata  ({gpio_prdata,  usb_cdc_prdata  , uart_prdata  , timer_prdata }),
+	.apbm_pslverr ({gpio_pslverr, usb_cdc_pslverr , uart_pslverr , timer_pslverr})
 );
 
 // ----------------------------------------------------------------------------
@@ -675,6 +688,25 @@ uart_mini uart_u (
 	.rts          (/* unused */),
 	.irq          (uart_irq),
 	.dreq         (/* unused */)
+);
+
+// GPIO APB peripheral (controls top-level gpio inout [27:0])
+gpio_apb #(
+	.NGPIO (28)
+) gpio_u (
+	.clk          (clk),
+	.rst_n        (rst_n),
+
+	.apbs_psel    (gpio_psel),
+	.apbs_penable (gpio_penable),
+	.apbs_pwrite  (gpio_pwrite),
+	.apbs_paddr   (gpio_paddr),
+	.apbs_pwdata  (gpio_pwdata),
+	.apbs_prdata  (gpio_prdata),
+	.apbs_pready  (gpio_pready),
+	.apbs_pslverr (gpio_pslverr),
+
+	.gpio_io      (gpio)
 );
 
 // Microsecond timebase for timer
