@@ -106,7 +106,7 @@ typedef union {
 		uint32_t primed : 1;
 		uint32_t triggered : 1;
 		uint32_t stopped : 1;
-		uint32_t reset_request : 1;
+		uint32_t nreset_request : 1;
 	} bits;
 } ahbscope_status_hw_t;
 
@@ -187,7 +187,7 @@ static void uart_intr_irq_handler(void) {
 
 		// bit[31]=0 requests reset/re-arm; clear disable_trigger and reload holdoff
 		ahbscope_status_hw_t status = mm_ahbscope->status;
-		status.bits.reset_request = 0u;
+		status.bits.nreset_request = 0u;
 		status.bits.disable_trigger = 0u;
 		status.bits.manual_trigger = 0u;
 		mm_ahbscope->status = status;
@@ -385,11 +385,10 @@ static void ahbscope_intr_irq_handler(void) {
 	asm volatile ("" : : : "memory");
 	uart_intr_tx_head = tx_head;
 
-	// Writing bit[31]=0 would request a scope reset. Force it to 1 so only
-	// disable_trigger is updated while the capture IRQ is being serviced.
+	// disable requesting a scope reset
 	ahbscope_status_hw_t status = mm_ahbscope->status;
 	status.bits.disable_trigger = 1u;
-	status.bits.reset_request = 1u;
+	status.bits.nreset_request = 1u;
 	mm_ahbscope->status = status;
 
 	mm_uart->csr.bits.txie = 1u;
@@ -398,7 +397,7 @@ static void ahbscope_intr_irq_handler(void) {
 static inline void ahbscope_intr_init(uint32_t holdoff) {
 	// bit[31]=0 requests a reset/arm and bits[19:0] program holdoff
 	ahbscope_status_hw_t status = {.value = 0u};
-	status.bits.reset_request = 0;
+	status.bits.nreset_request = 0u;
 	status.bits.full_holdoff = holdoff;
 	mm_ahbscope->status = status;
 

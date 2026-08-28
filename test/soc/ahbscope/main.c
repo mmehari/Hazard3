@@ -1,6 +1,5 @@
 #include "tb_cxxrtl_io.h"
 
-#define AHBSCOPE_BASE      0x60000000u
 #define AHBSCOPE_STATUS    (*(volatile uint32_t *)(AHBSCOPE_BASE + 0x0u))
 #define AHBSCOPE_DATA      (*(volatile uint32_t *)(AHBSCOPE_BASE + 0x4u))
 
@@ -11,15 +10,16 @@
 #define AHBSCOPE_HOLDOFF(x) ((x) & 0x000fffffu)
 
 static void uart_puts_ila(uint32_t value) {
-	char buf[5];
+	char buf[6];
 
 	buf[0] = ((value>>0)  & 0x7f) | 0x80;
 	buf[1] = ((value>>7)  & 0x7f);
 	buf[2] = ((value>>14) & 0x7f);
 	buf[3] = ((value>>21) & 0x7f);
 	buf[4] = ((value>>28) & 0x0f);
+	buf[5] = 0;
 
-	uart_puts_data(buf, 5);
+	uart_puts(buf);
 }
 
 void main() {
