@@ -27,7 +27,7 @@ file peri/gpio_apb.v
  
 # AHB3-Lite hosted scope
 
-list peri/ahbscope.f
+file peri/ahbscope.v
 
 # Generic SoC components from libfpga
 
