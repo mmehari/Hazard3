@@ -4,8 +4,8 @@
  * BMP581 pressure and temperature reader using GPIO bit-banged I2C.
  *
  * Wiring:
- *   gpio[0] -> SDA
- *   gpio[1] -> SCL
+ *   gpio[0] / pin 27 -> SDA
+ *   gpio[1] / pin 28 -> SCL
  *   Add external pull-ups to the sensor supply on both lines.
  *
  * The GPIO peripheral emulates open-drain outputs by switching each line
@@ -39,8 +39,8 @@ static uint32_t gpio_out;
 static uint32_t gpio_dir;
 
 static inline void gpio_commit(void) {
-	mm_gpio->data = gpio_out;
-	mm_gpio->dir = gpio_dir;
+	gpio_set_dir(gpio_dir);
+	gpio_write(gpio_out);
 }
 
 static inline void i2c_sda_low(void) {

@@ -43,16 +43,12 @@ static const uint8_t digit_seg[10] = {
 
 static uint32_t gpio_out_shadow;
 
-static inline void gpio_commit(void) {
-	mm_gpio->data = gpio_out_shadow;
-}
-
 static inline void clk_set(int level) {
 	if (level)
 		gpio_out_shadow |= TM1637_CLK_MASK;
 	else
 		gpio_out_shadow &= ~TM1637_CLK_MASK;
-	gpio_commit();
+	gpio_write(gpio_out_shadow);
 }
 
 static inline void dio_set(int level) {
@@ -60,7 +56,7 @@ static inline void dio_set(int level) {
 		gpio_out_shadow |= TM1637_DIO_MASK;
 	else
 		gpio_out_shadow &= ~TM1637_DIO_MASK;
-	gpio_commit();
+	gpio_write(gpio_out_shadow);
 }
 
 static void tm1637_delay(void) {
@@ -111,7 +107,7 @@ static void tm1637_write_byte(uint8_t b) {
 static void tm1637_init(void) {
 	gpio_out_shadow = TM1637_PIN_MASK; /* idle high */
 	gpio_set_dir(TM1637_PIN_MASK);
-	gpio_commit();
+	gpio_write(gpio_out_shadow);
 	tm1637_stop();
 
 	/* Display on + brightness */
