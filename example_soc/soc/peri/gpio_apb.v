@@ -18,7 +18,9 @@ module gpio_apb #(
 	output wire                  apbs_pready,
 	output wire                  apbs_pslverr,
 
-	inout  wire [NGPIO-1:0]      gpio_io
+	output wire [NGPIO-1:0]      gpio_out,
+	output wire [NGPIO-1:0]      gpio_oe,
+	input  wire [NGPIO-1:0]      gpio_in
 );
 
 // Simple register map:
@@ -31,18 +33,8 @@ localparam ADDR_DIR  = 3'h4;
 reg [NGPIO-1:0] dir_reg; // 1 -> drive
 reg [NGPIO-1:0] out_reg;
 
-wire [NGPIO-1:0] gpio_in;
-
-// Read the external pin values
-assign gpio_in = gpio_io;
-
-// Drive outputs when dir bit is set
-genvar i;
-generate
-	for (i = 0; i < NGPIO; i = i + 1) begin : drv
-		assign gpio_io[i] = dir_reg[i] ? out_reg[i] : 1'bz;
-	end
-endgenerate
+assign gpio_out = out_reg;
+assign gpio_oe  = dir_reg;
 
 // APB simple ready/err
 assign apbs_pready = 1'b1;

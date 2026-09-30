@@ -388,8 +388,10 @@ hazard3_cpu_1port #(
 
 // - 128 kB SRAM at... 0x0000_0000
 // - System timer at.. 0x4000_0000
-// - UART at.......... 0x4000_4000
-// - USB_CDC at....... 0x4000_8000
+// - UART at.......... 0x4000_1000
+// - USB_CDC at....... 0x4000_2000
+// - GPIO at.......... 0x4000_3000
+// - I2C at........... 0x4000_4000
 // - AHB scope at..... 0x6000_0000
 
 // AHBL layer
@@ -518,6 +520,16 @@ wire [31:0] gpio_prdata;
 wire        gpio_pready;
 wire        gpio_pslverr;
 
+// I2C APB signals
+wire        i2c_psel;
+wire        i2c_penable;
+wire        i2c_pwrite;
+wire [15:0] i2c_paddr;
+wire [31:0] i2c_pwdata;
+wire [31:0] i2c_prdata;
+wire        i2c_pready;
+wire        i2c_pslverr;
+
 ahbl_to_apb apb_bridge_u (
 	.clk               (clk),
 	.rst_n             (rst_n),
@@ -546,9 +558,9 @@ ahbl_to_apb apb_bridge_u (
 );
 
 apb_splitter #(
-	.N_SLAVES   (4),
-	.ADDR_MAP   (64'hC000_8000_4000_0000),
-	.ADDR_MASK  (64'hC000_C000_C000_C000)
+	.N_SLAVES   (5),
+	.ADDR_MAP   (80'h4000_3000_2000_1000_0000),
+	.ADDR_MASK  (80'hF000_F000_F000_F000_F000)
 ) inst_apb_splitter (
 	.apbs_paddr   (bridge_paddr),
 	.apbs_psel    (bridge_psel),
@@ -559,14 +571,14 @@ apb_splitter #(
 	.apbs_prdata  (bridge_prdata),
 	.apbs_pslverr (bridge_pslverr),
 
-	.apbm_paddr   ({gpio_paddr,   usb_cdc_paddr   , uart_paddr   , timer_paddr  }),
-	.apbm_psel    ({gpio_psel,    usb_cdc_psel    , uart_psel    , timer_psel   }),
-	.apbm_penable ({gpio_penable, usb_cdc_penable , uart_penable , timer_penable}),
-	.apbm_pwrite  ({gpio_pwrite,  usb_cdc_pwrite  , uart_pwrite  , timer_pwrite }),
-	.apbm_pwdata  ({gpio_pwdata,  usb_cdc_pwdata  , uart_pwdata  , timer_pwdata }),
-	.apbm_pready  ({gpio_pready,  usb_cdc_pready  , uart_pready  , timer_pready }),
-	.apbm_prdata  ({gpio_prdata,  usb_cdc_prdata  , uart_prdata  , timer_prdata }),
-	.apbm_pslverr ({gpio_pslverr, usb_cdc_pslverr , uart_pslverr , timer_pslverr})
+	.apbm_paddr   ({i2c_paddr,   gpio_paddr,   usb_cdc_paddr   , uart_paddr   , timer_paddr  }),
+	.apbm_psel    ({i2c_psel,    gpio_psel,    usb_cdc_psel    , uart_psel    , timer_psel   }),
+	.apbm_penable ({i2c_penable, gpio_penable, usb_cdc_penable , uart_penable , timer_penable}),
+	.apbm_pwrite  ({i2c_pwrite,  gpio_pwrite,  usb_cdc_pwrite  , uart_pwrite  , timer_pwrite }),
+	.apbm_pwdata  ({i2c_pwdata,  gpio_pwdata,  usb_cdc_pwdata  , uart_pwdata  , timer_pwdata }),
+	.apbm_pready  ({i2c_pready,  gpio_pready,  usb_cdc_pready  , uart_pready  , timer_pready }),
+	.apbm_prdata  ({i2c_prdata,  gpio_prdata,  usb_cdc_prdata  , uart_prdata  , timer_prdata }),
+	.apbm_pslverr ({i2c_pslverr, gpio_pslverr, usb_cdc_pslverr , uart_pslverr , timer_pslverr})
 );
 
 // ----------------------------------------------------------------------------
@@ -690,7 +702,17 @@ uart_mini uart_u (
 	.dreq         (/* unused */)
 );
 
-// GPIO APB peripheral (controls top-level gpio inout [27:0])
+// GPIO and I2C share gpio[0]=SDA and gpio[1]=SCL. I2C claims both
+// lines while enabled; otherwise GPIO drives them.
+wire [27:0] gpio_out;
+wire [27:0] gpio_oe;
+wire [27:0] gpio_in;
+wire        i2c_en;
+wire        i2c_sda_oe;
+wire        i2c_scl_oe;
+wire [27:0] pad_out;
+wire [27:0] pad_oe;
+
 gpio_apb #(
 	.NGPIO (28)
 ) gpio_u (
@@ -706,8 +728,45 @@ gpio_apb #(
 	.apbs_pready  (gpio_pready),
 	.apbs_pslverr (gpio_pslverr),
 
-	.gpio_io      (gpio)
+	.gpio_out     (gpio_out),
+	.gpio_oe      (gpio_oe),
+	.gpio_in      (gpio_in)
 );
+
+i2c_apb i2c_u (
+	.clk          (clk),
+	.rst_n        (rst_n),
+
+	.apbs_psel    (i2c_psel),
+	.apbs_penable (i2c_penable),
+	.apbs_pwrite  (i2c_pwrite),
+	.apbs_paddr   (i2c_paddr),
+	.apbs_pwdata  (i2c_pwdata),
+	.apbs_prdata  (i2c_prdata),
+	.apbs_pready  (i2c_pready),
+	.apbs_pslverr (i2c_pslverr),
+
+	.i2c_en       (i2c_en),
+	.sda_oe       (i2c_sda_oe),
+	.scl_oe       (i2c_scl_oe),
+	.sda_i        (gpio[0]),
+	.scl_i        (gpio[1])
+);
+
+assign pad_out[0]     = i2c_en ? 1'b0 : gpio_out[0];
+assign pad_out[1]     = i2c_en ? 1'b0 : gpio_out[1];
+assign pad_out[27:2]  = gpio_out[27:2];
+assign pad_oe[0]      = i2c_en ? i2c_sda_oe : gpio_oe[0];
+assign pad_oe[1]      = i2c_en ? i2c_scl_oe : gpio_oe[1];
+assign pad_oe[27:2]   = gpio_oe[27:2];
+assign gpio_in        = gpio;
+
+genvar gi;
+generate
+	for (gi = 0; gi < 28; gi = gi + 1) begin : gpio_pad
+		assign gpio[gi] = pad_oe[gi] ? pad_out[gi] : 1'bz;
+	end
+endgenerate
 
 // Microsecond timebase for timer
 

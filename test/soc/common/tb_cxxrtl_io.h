@@ -12,9 +12,10 @@
 // SOC IO hardware layout
 
 #define TIMER_BASE 0x40000000
-#define UART_BASE 0x40004000
-#define USB_CDC_BASE 0x40008000
-#define GPIO_BASE 0x4000C000
+#define UART_BASE 0x40001000
+#define USB_CDC_BASE 0x40002000
+#define GPIO_BASE 0x40003000
+#define I2C_BASE 0x40004000
 #define AHBSCOPE_BASE 0x60000000
 
 typedef struct {
@@ -102,6 +103,30 @@ typedef struct {
 } gpio_hw_t;
 
 #define mm_gpio ((gpio_hw_t *const)(GPIO_BASE))
+
+typedef union {
+	uint32_t value;
+	struct {
+		uint32_t en : 1;
+		uint32_t sta : 1;
+		uint32_t sto : 1;
+		uint32_t rd : 1;
+		uint32_t wr : 1;
+		uint32_t nack : 1;
+		uint32_t _reserved0 : 2;
+		uint32_t busy : 1;
+		uint32_t rxack : 1;
+		uint32_t _reserved1 : 22;
+	} bits;
+} i2c_csr_hw_t;
+
+typedef struct {
+	volatile i2c_csr_hw_t csr; /* 0x00 */
+	volatile uint32_t div;     /* 0x04 SCL half-period in clk cycles */
+	volatile uint32_t data;    /* 0x08 write TX, read RX */
+} i2c_hw_t;
+
+#define mm_i2c ((i2c_hw_t *const)(I2C_BASE))
 
 typedef union {
 	uint32_t value;
