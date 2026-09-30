@@ -41,7 +41,7 @@ fpga_reset #(
 example_soc #(
 	.DTM_TYPE           ("ECP5"),
 	.SRAM_DEPTH         (1<<14),
-	.PRELOAD_FILE       ("../../test/soc/BMP581_bitbang/tmp/BMP581_bitbang.hex"),
+	.PRELOAD_FILE       ("../../test/soc/BMP581/tmp/BMP581.hex"),
 	.CLK_MHZ            (48),
 
 	.EXTENSION_M         (1),

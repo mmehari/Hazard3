@@ -406,6 +406,20 @@ static inline uint32_t gpio_read(void) {
 	return mm_gpio->data;
 }
 
+static inline void i2c_hw_wait(void) {
+	while (mm_i2c->csr.bits.busy);
+}
+
+static inline void i2c_hw_enable(uint32_t div) {
+	mm_i2c->div = div;
+	mm_i2c->csr.bits.en = 1u;
+}
+
+static inline void i2c_hw_disable(void) {
+	i2c_hw_wait();
+	mm_i2c->csr.bits.en = 0u;
+}
+
 static void ahbscope_intr_irq_handler(void) {
 	uint32_t nsamples = 1u << (mm_ahbscope->status.bits.lgmem);
 	// 5 encoded bytes per 32-bit sample; keep one capture inside the TX ring.
